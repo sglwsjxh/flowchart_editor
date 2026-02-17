@@ -1,0 +1,53 @@
+{
+  "name": "flowchart_editor",
+  "version": "1.0.0",
+  "description": "一个基于原生 JavaScript 和 Canvas 的零依赖工作流编辑器",
+  "keywords": [
+    "flowchart",
+    "editor",
+    "diagram",
+    "workflow",
+    "electron"
+  ],
+  "homepage": "https://github.com/sglwsjxh/flowchart_editor#readme",
+  "bugs": {
+    "url": "https://github.com/sglwsjxh/flowchart_editor/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sglwsjxh/flowchart_editor.git"
+  },
+  "license": "MIT",
+  "author": "mark3",
+  "type": "commonjs",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --x64",
+    "build-portable": "electron-builder --win portable --x64",
+    "build-single": "electron-builder --win portable --x64 --config.compression=maximum"
+  },
+  "devDependencies": {
+    "electron": "^40.4.1",
+    "electron-builder": "^26.7.0"
+  },
+  "build": {
+    "appId": "com.sglwsjxh.flowchart_editor",
+    "productName": "flowchart_editor",
+    "directories": {
+      "output": "dist"
+    },
+    "asar": true,
+    "compression": "maximum",
+    "files": [
+      "main.js",
+      "index.html",
+      "icon.ico",
+      "package.json"
+    ],
+    "win": {
+      "icon": "icon.ico",
+      "target": "portable"
+    }
+  }
+}
