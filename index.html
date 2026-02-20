@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>工作流绘制 · 导出矢量图</title>
+    <title>工作流绘制</title>
     <style>
         * {
             box-sizing: border-box;
@@ -54,7 +54,6 @@
             background: #4a4a63;
             margin: 0 8px;
         }
-        /* 下拉菜单样式 */
         .save-dropdown-container {
             position: relative;
             display: inline-block;
@@ -226,7 +225,6 @@
     <div class="toolbar">
         <button id="btn-new">📄 新建</button>
         <button id="btn-open">📂 打开</button>
-        <!-- 合并后的保存下拉按钮组 -->
         <div class="save-dropdown-container">
             <button id="btn-save-main">💾 保存</button>
             <button id="btn-save-dropdown">▼</button>
@@ -908,8 +906,7 @@
       <feDropShadow dx="2" dy="3" stdDeviation="3" flood-color="#000" flood-opacity="0.3"/>
     </filter>
   </defs>
-  
-  <!-- 背景网格 (与画布一致) -->
+
   <g opacity="0.2">
     <defs>
       <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
@@ -918,8 +915,7 @@
     </defs>
     <rect x="${leftWorld}" y="${topWorld}" width="${viewWidth}" height="${viewHeight}" fill="url(#grid)"/>
   </g>
-  
-  <!-- 连接线 (不带箭头，与canvas一致) -->
+
   <g stroke="#9f9fd6" stroke-width="2" fill="none">
 `;
 
