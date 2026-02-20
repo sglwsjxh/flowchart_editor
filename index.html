@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>工作流绘制</title>
+    <title>工作流绘制 · 导出矢量图</title>
     <style>
         * {
             box-sizing: border-box;
@@ -53,6 +53,54 @@
             height: 24px;
             background: #4a4a63;
             margin: 0 8px;
+        }
+        /* 下拉菜单样式 */
+        .save-dropdown-container {
+            position: relative;
+            display: inline-block;
+        }
+        #btn-save-main {
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+            border-right: 1px solid #5a5a77;
+        }
+        #btn-save-dropdown {
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+            padding-left: 8px;
+            padding-right: 8px;
+            margin-left: -1px;
+        }
+        .save-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: #2d2d3f;
+            border: 1px solid #5a5a77;
+            border-radius: 6px;
+            margin-top: 4px;
+            min-width: 140px;
+            z-index: 20;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        .save-menu div {
+            padding: 10px 16px;
+            cursor: pointer;
+            color: white;
+            font-size: 14px;
+            transition: background 0.1s;
+        }
+        .save-menu div:hover {
+            background: #4a4a6a;
+        }
+        .save-menu div:first-child {
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+        }
+        .save-menu div:last-child {
+            border-bottom-left-radius: 6px;
+            border-bottom-right-radius: 6px;
         }
         .main {
             display: flex;
@@ -178,7 +226,15 @@
     <div class="toolbar">
         <button id="btn-new">📄 新建</button>
         <button id="btn-open">📂 打开</button>
-        <button id="btn-save">💾 保存</button>
+        <!-- 合并后的保存下拉按钮组 -->
+        <div class="save-dropdown-container">
+            <button id="btn-save-main">💾 保存</button>
+            <button id="btn-save-dropdown">▼</button>
+            <div id="save-menu" class="save-menu">
+                <div id="btn-save-json">保存为 JSON</div>
+                <div id="btn-save-svg">保存为 SVG</div>
+            </div>
+        </div>
         <span class="separator"></span>
         <button id="btn-undo">↩ 撤销</button>
         <button id="btn-redo">↪ 重做</button>
@@ -820,6 +876,136 @@
             }
         }
 
+        function saveAsJSON() {
+            const data = { nodes, edges };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'workflow.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function exportSVG() {
+            if (nodes.length === 0 && edges.length === 0) {
+                alert('画布为空，无法导出');
+                return;
+            }
+
+            const leftWorld = (0 - transform.offsetX) / transform.scale;
+            const topWorld = (0 - transform.offsetY) / transform.scale;
+            const rightWorld = (canvas.width - transform.offsetX) / transform.scale;
+            const bottomWorld = (canvas.height - transform.offsetY) / transform.scale;
+
+            const viewWidth = rightWorld - leftWorld;
+            const viewHeight = bottomWorld - topWorld;
+
+            let svgContent = `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="${canvas.width}" height="${canvas.height}" viewBox="${leftWorld} ${topWorld} ${viewWidth} ${viewHeight}" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="3" stdDeviation="3" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  
+  <!-- 背景网格 (与画布一致) -->
+  <g opacity="0.2">
+    <defs>
+      <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+        <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#666" stroke-width="1"/>
+      </pattern>
+    </defs>
+    <rect x="${leftWorld}" y="${topWorld}" width="${viewWidth}" height="${viewHeight}" fill="url(#grid)"/>
+  </g>
+  
+  <!-- 连接线 (不带箭头，与canvas一致) -->
+  <g stroke="#9f9fd6" stroke-width="2" fill="none">
+`;
+
+            edges.forEach(edge => {
+                const sourceNode = nodes.find(n => n.id === edge.sourceNode);
+                const targetNode = nodes.find(n => n.id === edge.targetNode);
+                if (!sourceNode || !targetNode) return;
+
+                const startPort = getPortPosition(sourceNode, edge.sourcePortIndex, 'output');
+                const endPort = getPortPosition(targetNode, edge.targetPortIndex, 'input');
+                
+                const midX = (startPort.x + endPort.x) / 2;
+                svgContent += `    <path d="M ${startPort.x} ${startPort.y} C ${midX} ${startPort.y}, ${midX} ${endPort.y}, ${endPort.x} ${endPort.y}"/>
+`;
+            });
+
+            svgContent += '  </g>\n  <!-- 节点 -->\n';
+
+            nodes.forEach(node => {
+                const x = node.x;
+                const y = node.y;
+                const width = node.width || 160;
+                const height = node.height || 100;
+                const color = node.color || '#3a4a6b';
+                
+                svgContent += `  <g filter="url(#shadow)">
+    <rect x="${x}" y="${y}" width="${width}" height="${height}" rx="8" fill="${color}" stroke="#222230" stroke-width="1.5"/>
+    <text x="${x + width/2}" y="${y + height/2}" text-anchor="middle" dominant-baseline="middle" fill="white" font-family="system-ui, sans-serif" font-weight="bold" font-size="${Math.min(16, height/5)}" stroke="black" stroke-width="0.5" paint-order="stroke">${node.title || node.type}</text>
+  </g>
+`;
+
+                node.inputs.forEach((port, idx) => {
+                    const pos = getPortPosition(node, idx, 'input');
+                    svgContent += `  <circle cx="${pos.x}" cy="${pos.y}" r="5" fill="#6bd4c8"/>
+`;
+                });
+
+                node.outputs.forEach((port, idx) => {
+                    const pos = getPortPosition(node, idx, 'output');
+                    svgContent += `  <circle cx="${pos.x}" cy="${pos.y}" r="5" fill="#f9a87c"/>
+`;
+                });
+            });
+
+            svgContent += '</svg>';
+
+            const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'workflow-snapshot.svg';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        const btnSaveMain = document.getElementById('btn-save-main');
+        const btnSaveDropdown = document.getElementById('btn-save-dropdown');
+        const saveMenu = document.getElementById('save-menu');
+        const btnSaveJson = document.getElementById('btn-save-json');
+        const btnSaveSvg = document.getElementById('btn-save-svg');
+
+        btnSaveMain.addEventListener('click', exportSVG);
+
+        btnSaveDropdown.addEventListener('click', (e) => {
+            e.stopPropagation();
+            saveMenu.style.display = saveMenu.style.display === 'block' ? 'none' : 'block';
+        });
+
+        btnSaveJson.addEventListener('click', (e) => {
+            e.stopPropagation();
+            saveAsJSON();
+            saveMenu.style.display = 'none';
+        });
+
+        btnSaveSvg.addEventListener('click', (e) => {
+            e.stopPropagation();
+            exportSVG();
+            saveMenu.style.display = 'none';
+        });
+
+        document.addEventListener('click', () => {
+            saveMenu.style.display = 'none';
+        });
+
+        saveMenu.addEventListener('click', (e) => e.stopPropagation());
+
         document.getElementById('btn-new').addEventListener('click', () => {
             nodes = [];
             edges = [];
@@ -828,16 +1014,6 @@
             pushHistory();
             updatePropertyPanel();
             drawCanvas();
-        });
-
-        document.getElementById('btn-save').addEventListener('click', () => {
-            const data = { nodes, edges };
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'workflow.json';
-            a.click();
         });
 
         document.getElementById('btn-open').addEventListener('click', () => {
